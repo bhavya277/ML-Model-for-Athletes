@@ -4,12 +4,10 @@ Provides standardized interfaces for training, out-of-fold blending, and product
 """
 
 import numpy as np
-import pandas as pd
-from typing import Dict, Any, List, Optional, Tuple
-from sklearn.linear_model import LogisticRegression, Ridge
+from typing import List, Optional, Tuple
+from sklearn.linear_model import Ridge
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 import lightgbm as lgb
-import xgboost as xgb
 import catboost as cb
 
 class InjuryClassifierEnsemble:
@@ -128,18 +126,12 @@ class MultiTargetInjurySystem:
         self.recovery_model.fit(X_inj, y_rec)
         return self
 
-    def predict(self, X: np.ndarray, threshold: float = 0.50, zero_fill_non_injured: bool = False) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
-        """Performs multi-target prediction according to competition specification."""
+    def predict(self, X: np.ndarray, threshold: float = 0.50) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+        """
+        Performs multi-target prediction according to competition specification.
+        Returns injury predictions and full-row timing predictions for all athletes.
+        """
         inj_pred = self.classifier.predict(X, threshold=threshold)
         raw_onset = self.onset_model.predict(X)
         raw_rec = self.recovery_model.predict(X)
-
-        if zero_fill_non_injured:
-            final_onset = np.where(inj_pred == 1, raw_onset, 0)
-            final_rec = np.where(inj_pred == 1, raw_rec, 0)
-        else:
-            # Official Playhack PS: onset and recovery provided for every athlete
-            final_onset = raw_onset
-            final_rec = raw_rec
-
-        return inj_pred, final_onset, final_rec
+        return inj_pred, raw_onset, raw_rec

@@ -1,11 +1,11 @@
 """
 Preprocessing and Feature Transformation Pipeline for Athlete Injury Prediction.
-Handles missing values, categorical encoding, and feature scaling with exact alignment.
+Handles missing values, categorical encoding, and feature alignment.
 """
 
 import numpy as np
 import pandas as pd
-from typing import Tuple, List, Optional, Dict, Any
+from typing import Tuple, List, Dict
 from sklearn.preprocessing import StandardScaler
 
 CAT_COLS = ['sport', 'gender', 'dominant_side', 'position']
@@ -63,8 +63,3 @@ class Preprocessor:
                 
         X = df_encoded[self.feature_columns].values.astype(np.float64)
         return X
-
-    def transform_scaled(self, df: pd.DataFrame) -> np.ndarray:
-        """Transforms and scales unseen test data."""
-        X = self.transform(df)
-        return self.scaler.transform(X)

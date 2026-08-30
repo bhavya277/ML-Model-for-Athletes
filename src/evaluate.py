@@ -3,11 +3,11 @@ Evaluation and Error Analysis Module for Athlete Injury Prediction System.
 Computes comprehensive metrics, calibration curves, confusion matrices, and sport breakdowns.
 """
 
+# pyrefly: ignore [missing-import]
 import numpy as np
 import pandas as pd
-import json
 import os
-from typing import Dict, Any, Tuple
+from typing import Dict
 from sklearn.metrics import (
     roc_auc_score,
     average_precision_score,

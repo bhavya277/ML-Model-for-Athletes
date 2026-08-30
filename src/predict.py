@@ -6,9 +6,7 @@ Loads serialized models and generates validated submission files.
 import os
 import sys
 import joblib
-import numpy as np
 import pandas as pd
-from typing import Optional
 
 # Add project root to sys.path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))

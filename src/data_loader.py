@@ -6,7 +6,7 @@ Enforces strict temporal boundary filtering to guarantee zero leakage.
 import os
 import pandas as pd
 import polars as pl
-from typing import Tuple, Dict, Any
+from typing import Tuple
 
 HISTORICAL_CUTOFF_DATE = "2026-02-03"
 HISTORICAL_CUTOFF_TIMESTAMP = "2026-02-03T23:59:59"
@@ -66,16 +66,6 @@ class DataLoader:
             pl.col("ActivityHour") <= HISTORICAL_CUTOFF_TIMESTAMP
         )
         te = pl.read_csv(os.path.join(self.test_data_dir, "hourlyHeartrate_merged.csv")).filter(
-            pl.col("ActivityHour") <= HISTORICAL_CUTOFF_TIMESTAMP
-        )
-        return tr, te
-
-    def load_hourly_steps(self) -> Tuple[pl.DataFrame, pl.DataFrame]:
-        """Loads hourly steps enforcing strict historical cutoff."""
-        tr = pl.read_csv(os.path.join(self.raw_data_dir, "hourlySteps_merged.csv")).filter(
-            pl.col("ActivityHour") <= HISTORICAL_CUTOFF_TIMESTAMP
-        )
-        te = pl.read_csv(os.path.join(self.test_data_dir, "hourlySteps_merged.csv")).filter(
             pl.col("ActivityHour") <= HISTORICAL_CUTOFF_TIMESTAMP
         )
         return tr, te
