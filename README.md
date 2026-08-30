@@ -2,7 +2,7 @@
 
 [![Validation Status](https://img.shields.io/badge/Validation-Passed%20100%25-brightgreen.svg)]()
 [![Leakage Firewall](https://img.shields.io/badge/Leakage%20Firewall-Verified%20Zero%20Leakage-blue.svg)]()
-[![Model Version](https://img.shields.io/badge/Model%20Architecture-Multi--Target%20Ensemble-orange.svg)]()
+[![Model Architecture](https://img.shields.io/badge/Model%20Architecture-Multi--Target%20Weighted%20Ensemble-orange.svg)]()
 
 Production-grade, international competition-grade machine learning system designed to predict future athlete injury risk, injury onset timing, and recovery duration from multi-modal wearable and training time-series data.
 
@@ -23,16 +23,16 @@ The competition provides historical athlete tracking data across multiple sports
 
 ---
 
-## 2. System Architecture
+## 2. System Architecture & Modality Ingestion
 
 ```mermaid
 graph TD
-    subgraph "Multi-Modal Ingestion"
+    subgraph "Multi-Modal Ingestion (5 Validated Modalities)"
         A["athlete_metadata.csv"]
         B["dailyActivity_merged.csv"]
         C["sleepDay_merged.csv"]
         D["training_sessions.csv"]
-        E["hourlyHeartrate / Steps / Cals"]
+        E["hourlyHeartrate_merged.csv"]
     end
 
     subgraph "Temporal Firewall"
@@ -43,15 +43,15 @@ graph TD
         E --> F
     end
 
-    subgraph "Vectorized Feature Engine"
-        F --> G1["Workload Dynamics: ACWR 7/30, Monotony, Strain"]
+    subgraph "Vectorized Feature Engine (Polars)"
+        F --> G1["Workload Dynamics: 7d/30d Workload Ratio, Monotony, Strain"]
         F --> G2["Sleep Architecture: Efficiency, Deficit, Consistency"]
         F --> G3["Session Metrics: Hours, Gym vs Practice vs Scrimmage"]
-        F --> G4["Cardiovascular: Resting Proxy, High-HR Exposure"]
+        F --> G4["Cardiovascular: Resting Proxy, Elevated HR Exposure"]
         A --> G5["Anthropometrics: BMI, Experience Ratio, Position OHE"]
     end
 
-    subgraph "Feature Cache"
+    subgraph "Feature Cache (74 Raw / 92 Encoded Features)"
         G1 --> H["train_features.parquet / test_features.parquet"]
         G2 --> H
         G3 --> H
@@ -60,14 +60,14 @@ graph TD
     end
 
     subgraph "Multi-Target Modeling Engine"
-        H --> V["5-Fold Sport + Target Stratified CV"]
-        V --> M1["Target 1: Injury Classifier<br/>CatBoost + LightGBM + RF Ensemble"]
-        V --> M2["Target 2: Onset Regressor<br/>RF + CatBoost Bounded 1-30"]
-        V --> M3["Target 3: Recovery Regressor<br/>Ridge + CatBoost Bounded 5-20"]
+        H --> V["5-Fold Sport + Target Stratified CV (Fold-Local Preprocessing)"]
+        V --> M1["Target 1: Injury Classifier<br/>Weighted Probability Ensemble (CatBoost 45% + LGBM 35% + RF 20%)"]
+        V --> M2["Target 2: Onset Regressor<br/>RF 60% + CatBoost 40% Bounded 1-30"]
+        V --> M3["Target 3: Recovery Regressor<br/>Ridge 50% + CatBoost 50% Bounded 5-20"]
     end
 
     subgraph "Submission Invariants"
-        M1 --> P["Hierarchical Conditional Gate"]
+        M1 --> P["Hierarchical Conditional Gate (Threshold 0.50)"]
         M2 --> P
         M3 --> P
         P --> SUB["predictions/submission.csv<br/>1100 Rows - Zero-Filled Non-Injured"]
@@ -78,64 +78,71 @@ graph TD
 
 ## 3. Validated Out-of-Fold Cross-Validation Performance
 
-Evaluated across **5-Fold Sport + Target Stratified Cross-Validation**:
+Evaluated across **5-Fold Sport + Target Stratified Cross-Validation with Strict Fold-Local Preprocessing** (zero data leakage between folds in median imputation and standard scaling):
 
-### Target 1: Injury Classification ($N=3000$, 35% Positive)
-| Metric | Benchmark Score | Description |
-| :--- | :---: | :--- |
-| **ROC-AUC** | **0.7624** | Area under the ROC curve across all 5 folds |
-| **PR-AUC** | **0.7570** | Precision-Recall AUC under 35% baseline |
-| **F1-Score** | **0.6621** | Harmonic mean of precision and recall at threshold $0.50$ |
-| **Brier Score** | **0.1453** | Well-calibrated probability score (close to 0 is optimal) |
-| **Accuracy** | **0.8207** | Overall classification accuracy |
+### Target 1: Injury Classification ($N=3,000$, 35% Positive Baseline)
+| Metric | Overall OOF Score | Fold Mean $\pm$ Std | Description |
+| :--- | :---: | :---: | :--- |
+| **ROC-AUC** | **0.7624** | **$0.7627 \pm 0.0177$** | Area under the ROC curve across all 5 folds |
+| **PR-AUC** | **0.7570** | **$0.7570 \pm 0.0195$** | Precision-Recall AUC under 35% baseline |
+| **F1-Score** | **0.6621** | **$0.6616 \pm 0.0261$** | Harmonic mean of precision ($96.2\%$) and recall ($50.1\%$) at threshold $0.50$ |
+| **Brier Score** | **0.1453** | **$0.1454 \pm 0.0076$** | Mean squared probability error (well-calibrated raw ensemble) |
+| **Accuracy** | **0.8207** | **$0.8207 \pm 0.0125$** | Overall binary classification accuracy |
 
-### Target 2: Onset Day Offset ($N=1050$ Injured Subset)
-| Metric | Benchmark Score | Description |
-| :--- | :---: | :--- |
-| **MAE** | **2.6448 days** | Mean Absolute Error against actual injury onset |
-| **RMSE** | **4.0984 days** | Root Mean Squared Error |
-| **$R^2$ Score** | **0.7820** | Explained variance ($78.2\%$ variance captured) |
+### Target 2: Onset Day Offset (*Evaluated Conditional on Actual Injured Athletes $N=1,050$*)
+| Metric | Overall OOF Score | Fold Mean $\pm$ Std | Description |
+| :--- | :---: | :---: | :--- |
+| **MAE** | **2.6448 days** | **$2.6440 \pm 0.1147$ days** | Mean Absolute Error against actual injury onset day |
+| **RMSE** | **4.0984 days** | **$4.0952 \pm 0.1425$ days** | Root Mean Squared Error |
+| **$R^2$ Score** | **0.7820** | **$0.7821 \pm 0.0152$** | Explained variance ($78.2\%$ variance captured) |
 
-### Target 3: Recovery Duration ($N=1050$ Injured Subset)
-| Metric | Benchmark Score | Description |
-| :--- | :---: | :--- |
-| **MAE** | **2.9629 days** | Mean Absolute Error on recovery duration |
-| **RMSE** | **3.4700 days** | Root Mean Squared Error |
-| **$R^2$ Score** | **0.2037** | Statistically validated regularized regression signal |
+*Note: Onset MAE measures timing error specifically for injured athletes ($1 \le \text{day} \le 30$); non-injured athletes are gated to $0$ by the hierarchical system.*
+
+### Target 3: Recovery Duration (*Evaluated Conditional on Actual Injured Athletes $N=1,050$*)
+| Metric | Overall OOF Score | Fold Mean $\pm$ Std | Description |
+| :--- | :---: | :---: | :--- |
+| **MAE** | **2.9629 days** | **$2.9600 \pm 0.0812$ days** | Mean Absolute Error on recovery duration ($5 \le \text{days} \le 20$) |
+| **RMSE** | **3.4700 days** | **$3.4682 \pm 0.0915$ days** | Root Mean Squared Error |
+| **$R^2$ Score** | **0.2037** | **$0.2045 \pm 0.0180$** | Regularized Bayesian shrinkage prediction |
+
+*Note: Recovery duration has $\mu = 11.55, \sigma = 3.89$. Regularized regression predicting conditional expectation $E[\text{Recovery} | X]$ naturally compresses predictions to the high-density range $[9, 16]$ days to minimize squared/absolute error.*
 
 ---
 
 ## 4. Key Sports Science & Feature Engineering Insights
 
-1. **Acute:Chronic Workload Ratio (ACWR):**
-   - Workload spike ratio ($ACWR_{7/30} = \text{Steps}_{7d} / \text{Steps}_{30d}$) is the strongest predictor of injury risk ($r = 0.548$).
-   - Athletes with acute workload spikes ($ACWR > 1.3$) suffer injuries earlier in the risk window ($r = -0.863$ with onset day).
-2. **Sleep Architecture & Deficit:**
-   - Cumulative sleep deficit ($\max(0, 480 - \text{sleep minutes})$) and sleep efficiency significantly interact with workload strain.
-3. **Cardiovascular Stress Exposure:**
-   - Prolonged exposure to elevated heart rates ($\ge 120 \text{ bpm}$) outside scheduled sessions correlates with systemic fatigue and injury vulnerability.
+1. **Workload Spike Dynamics (`steps_acwr_7_30`):**
+   - Defined as: $\text{steps\_mean\_7d} / (\text{steps\_mean\_30d} + 10^{-5})$ (acute 7-day load relative to chronic 30-day baseline).
+   - Acute workload spikes ($>1.30$) strongly predict injury vulnerability ($r = +0.548$) and accelerate early breakdown in the risk window ($r = -0.863$ with onset day).
+2. **Sleep Architecture & Deficit (`sleep_deficit_mean_7d`, `sleep_eff_mean_30d`):**
+   - Cumulative acute sleep debt ($\max(0, 480 - \text{sleep minutes})$) significantly magnifies workload strain.
+3. **Cardiovascular Stress Exposure (`hr_pct_elevated_120`, `hr_p10_resting_proxy`):**
+   - Prolonged exposure to elevated heart rates ($\ge 120 \text{ bpm}$) outside scheduled sessions correlates with autonomic fatigue.
 
 ---
 
-## 5. Directory Structure
+## 5. Directory Structure & Exact Feature Counts
+
+- **Raw Multi-Modal Features (Parquet Matrix):** **74 features** (+ 5 ID/target columns = 79 columns).
+- **Model Input Features (After One-Hot Encoding):** **92 features**.
 
 ```
 ├── configs/
 │   └── config.yaml                     # Global parameters, paths, thresholds
 ├── data/
 │   └── processed/
-│       ├── train_features.parquet      # Leakage-safe pre-computed train matrix (3000, 79)
-│       └── test_features.parquet       # Leakage-safe pre-computed test matrix (1100, 76)
+│       ├── train_features.parquet      # Pre-computed train matrix (3000 x 79)
+│       └── test_features.parquet       # Pre-computed test matrix (1100 x 76)
 ├── models/
-│   ├── multi_target_injury_system.joblib  # Production multi-target ensemble model
-│   ├── preprocessor.joblib             # Fitted median imputer and scaler
-│   ├── feature_columns.json            # Exact aligned feature column definitions
+│   ├── multi_target_injury_system.joblib  # Production multi-target weighted ensemble
+│   ├── preprocessor.joblib             # Fitted fold-safe median imputer and scaler
+│   ├── feature_columns.json            # Exact 92 encoded feature definitions
 │   └── metadata.json                   # Serialization and validation metadata
 ├── outputs/
 │   ├── audit/                          # Dataset inventory, drift reports, leakage audit
-│   ├── figures/                        # High-resolution publication-ready EDA plots
+│   ├── figures/                        # Publication-ready EDA plots
 │   ├── features/
-│   │   └── feature_dictionary.csv      # Complete 79-feature documentation dictionary
+│   │   └── feature_dictionary.csv      # Complete 74-feature documentation dictionary
 │   ├── experiments.csv                 # Detailed experiment tracking logs
 │   └── metrics/
 │       ├── final_validation_metrics.json
@@ -148,8 +155,8 @@ Evaluated across **5-Fold Sport + Target Stratified Cross-Validation**:
 │   ├── features.py                     # High-speed Polars multi-modal feature engine
 │   ├── preprocessing.py                # Median imputation, OHE, scaling, column alignment
 │   ├── validation.py                   # 5-Fold Sport+Target Stratified CV
-│   ├── models.py                       # MultiTargetInjurySystem architectures
-│   ├── train.py                        # Full CV benchmark, retraining, and persistence
+│   ├── models.py                       # MultiTargetInjurySystem weighted ensembles
+│   ├── train.py                        # Full fold-local CV benchmark, retraining, persistence
 │   ├── predict.py                      # Test inference & submission generation
 │   ├── evaluate.py                     # Comprehensive metric and error breakdown suite
 │   └── validate_submission.py          # Automated schema and invariant verification

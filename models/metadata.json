@@ -1,10 +1,11 @@
 {
-    "model_type": "MultiTargetInjurySystem",
-    "feature_count": 92,
+    "model_type": "MultiTargetWeightedEnsembleSystem",
+    "feature_count_encoded": 92,
+    "feature_count_raw": 74,
     "train_samples_total": 3000,
     "train_samples_injured": 1050,
     "validation_auc": 0.7624488400488401,
-    "validation_onset_mae": 2.644761904761905,
-    "validation_recovery_mae": 2.962857142857143,
-    "timestamp": "2026-08-30T18:08:07Z"
+    "validation_onset_mae_conditional": 2.644761904761905,
+    "validation_recovery_mae_conditional": 2.962857142857143,
+    "timestamp": "2026-08-30T18:24:57Z"
 }

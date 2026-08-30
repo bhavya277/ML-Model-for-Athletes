@@ -1,6 +1,7 @@
 """
-Production Training Pipeline with Experiment Tracking and Model Serialization.
-Executes 5-fold cross validation, tracks metrics, retrains full multi-target model, and saves artifacts.
+Production Training Pipeline with Strict Fold-Local Preprocessing and Experiment Tracking.
+Executes 5-fold cross validation (with zero fold-leakage in imputation/scaling),
+tracks metrics, retrains full multi-target model, and saves artifacts.
 """
 
 import os
@@ -10,6 +11,7 @@ import json
 import joblib
 import numpy as np
 import pandas as pd
+from typing import Dict, Any, List
 
 # Add project root to sys.path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -26,7 +28,7 @@ from src.evaluate import evaluate_classification, evaluate_regression, run_sport
 
 def run_training_pipeline():
     print("==================================================")
-    print("STARTING PRODUCTION TRAINING & CROSS-VALIDATION")
+    print("STARTING PRODUCTION TRAINING (STRICT FOLD-LOCAL CV)")
     print("==================================================")
     start_time = time.time()
     
@@ -41,14 +43,11 @@ def run_training_pipeline():
         
     print(f"Loaded training data: {df_train.shape}")
     
-    # 2. Preprocess
-    preprocessor = Preprocessor()
-    X, feature_cols = preprocessor.fit_transform(df_train)
     y_inj = df_train['injured_in_risk_window'].values
     y_onset = df_train['onset_day_offset'].values
     y_rec = df_train['recovery_duration'].values
     
-    # 3. 5-Fold Cross Validation
+    # 2. 5-Fold Cross Validation with Fold-Local Preprocessing
     cv = SportTargetStratifiedKFold(n_splits=5, shuffle=True, random_state=42)
     
     oof_inj_prob = np.zeros(len(df_train))
@@ -57,13 +56,17 @@ def run_training_pipeline():
     
     fold_metrics = []
     
-    print("\nExecuting 5-Fold Sport + Target Stratified CV...")
+    print("\nExecuting 5-Fold Sport + Target Stratified CV with Fold-Local Imputation & Scaling...")
     for fold, (tr_idx, val_idx) in enumerate(cv.split(df_train), 1):
-        # Subset for full cohort
-        X_tr, y_inj_tr = X[tr_idx], y_inj[tr_idx]
-        X_val, y_inj_val = X[val_idx], y_inj[val_idx]
+        # Strict fold-local preprocessing (fit on train fold ONLY)
+        fold_preprocessor = Preprocessor()
+        X_tr, feature_cols = fold_preprocessor.fit_transform(df_train.iloc[tr_idx])
+        X_val = fold_preprocessor.transform(df_train.iloc[val_idx])
         
-        # Subset for injured athletes
+        y_inj_tr = y_inj[tr_idx]
+        y_inj_val = y_inj[val_idx]
+        
+        # Subset for injured athletes in training fold
         inj_tr_mask = y_inj_tr == 1
         X_inj_tr = X_tr[inj_tr_mask]
         y_onset_tr = y_onset[tr_idx][inj_tr_mask]
@@ -83,7 +86,7 @@ def run_training_pipeline():
         oof_rec[val_idx] = raw_rec
         
         # Metrics on fold
-        f_clf = evaluate_classification(y_inj_val, probs)
+        f_clf = evaluate_classification(y_inj_val, probs, threshold=0.50)
         val_inj_mask = y_inj_val == 1
         f_onset = evaluate_regression(y_onset[val_idx][val_inj_mask], raw_onset[val_inj_mask])
         f_rec = evaluate_regression(y_rec[val_idx][val_inj_mask], raw_rec[val_inj_mask])
@@ -91,32 +94,52 @@ def run_training_pipeline():
         fold_metrics.append({
             "fold": fold,
             "roc_auc": f_clf['roc_auc'],
+            "pr_auc": f_clf['pr_auc'],
             "f1_score": f_clf['f1_score'],
             "brier_score": f_clf['brier_score'],
+            "accuracy": f_clf['accuracy'],
             "onset_mae": f_onset['mae'],
+            "onset_rmse": f_onset['rmse'],
             "onset_r2": f_onset['r2_score'],
             "recovery_mae": f_rec['mae'],
+            "recovery_rmse": f_rec['rmse'],
             "recovery_r2": f_rec['r2_score'],
         })
-        print(f"  Fold {fold} | Injury AUC: {f_clf['roc_auc']:.4f} | F1: {f_clf['f1_score']:.4f} | Onset MAE: {f_onset['mae']:.2f}d | Rec MAE: {f_rec['mae']:.2f}d")
+        print(f"  Fold {fold} | Injury AUC: {f_clf['roc_auc']:.4f} | F1: {f_clf['f1_score']:.4f} | Brier: {f_clf['brier_score']:.4f} | Onset MAE (Injured): {f_onset['mae']:.2f}d | Rec MAE (Injured): {f_rec['mae']:.2f}d")
         
     # Overall OOF Metrics
-    overall_clf = evaluate_classification(y_inj, oof_inj_prob)
+    overall_clf = evaluate_classification(y_inj, oof_inj_prob, threshold=0.50)
     inj_mask = y_inj == 1
     overall_onset = evaluate_regression(y_onset[inj_mask], oof_onset[inj_mask])
     overall_rec = evaluate_regression(y_rec[inj_mask], oof_rec[inj_mask])
     
-    print("\n=== OVERALL OUT-OF-FOLD BENCHMARK ===")
-    print(f"Injury Target   -> ROC-AUC: {overall_clf['roc_auc']:.4f} | PR-AUC: {overall_clf['pr_auc']:.4f} | F1: {overall_clf['f1_score']:.4f} | Brier: {overall_clf['brier_score']:.4f} | Acc: {overall_clf['accuracy']:.4f}")
-    print(f"Onset Target    -> MAE: {overall_onset['mae']:.4f} days | RMSE: {overall_onset['rmse']:.4f} days | R2: {overall_onset['r2_score']:.4f}")
-    print(f"Recovery Target -> MAE: {overall_rec['mae']:.4f} days | RMSE: {overall_rec['rmse']:.4f} days | R2: {overall_rec['r2_score']:.4f}")
+    # Calculate fold mean and std
+    auc_list = [f['roc_auc'] for f in fold_metrics]
+    f1_list = [f['f1_score'] for f in fold_metrics]
+    onset_mae_list = [f['onset_mae'] for f in fold_metrics]
+    rec_mae_list = [f['recovery_mae'] for f in fold_metrics]
+    
+    print("\n=== OVERALL OUT-OF-FOLD BENCHMARK (FOLD-LOCAL PREPROCESSING) ===")
+    print(f"Injury Target   -> ROC-AUC: {overall_clf['roc_auc']:.4f} (Fold Mean: {np.mean(auc_list):.4f} +/- {np.std(auc_list):.4f}) | PR-AUC: {overall_clf['pr_auc']:.4f} | F1: {overall_clf['f1_score']:.4f} (Fold Mean: {np.mean(f1_list):.4f} +/- {np.std(f1_list):.4f}) | Brier: {overall_clf['brier_score']:.4f} | Acc: {overall_clf['accuracy']:.4f}")
+    print(f"Onset Target    -> MAE: {overall_onset['mae']:.4f} days (Fold Mean: {np.mean(onset_mae_list):.4f} +/- {np.std(onset_mae_list):.4f}) | RMSE: {overall_onset['rmse']:.4f} days | R2: {overall_onset['r2_score']:.4f} [Evaluated conditional on actual injured athletes N=1050]")
+    print(f"Recovery Target -> MAE: {overall_rec['mae']:.4f} days (Fold Mean: {np.mean(rec_mae_list):.4f} +/- {np.std(rec_mae_list):.4f}) | RMSE: {overall_rec['rmse']:.4f} days | R2: {overall_rec['r2_score']:.4f} [Evaluated conditional on actual injured athletes N=1050]")
     
     # Save validation metrics
     validation_summary = {
         "folds": fold_metrics,
+        "fold_summary": {
+            "roc_auc_mean": float(np.mean(auc_list)),
+            "roc_auc_std": float(np.std(auc_list)),
+            "f1_mean": float(np.mean(f1_list)),
+            "f1_std": float(np.std(f1_list)),
+            "onset_mae_mean": float(np.mean(onset_mae_list)),
+            "onset_mae_std": float(np.std(onset_mae_list)),
+            "recovery_mae_mean": float(np.mean(rec_mae_list)),
+            "recovery_mae_std": float(np.std(rec_mae_list)),
+        },
         "overall_classification": overall_clf,
-        "overall_onset": overall_onset,
-        "overall_recovery": overall_rec,
+        "overall_onset_conditional": overall_onset,
+        "overall_recovery_conditional": overall_rec,
         "runtime_seconds": round(time.time() - start_time, 2)
     }
     os.makedirs("outputs/metrics", exist_ok=True)
@@ -126,18 +149,18 @@ def run_training_pipeline():
     
     # Save experiment tracking table
     exp_record = {
-        "model": "MultiTargetEnsembleSystem (CatBoost+LGBM+RF)",
-        "feature_version": "v1.0_multimodal_69features",
-        "validation_strategy": "5-Fold Sport+Target Stratified",
+        "model": "MultiTargetWeightedEnsemble (CatBoost 45% + LGBM 35% + RF 20%)",
+        "feature_version": "v1.0_multimodal_92encoded_features",
+        "validation_strategy": "5-Fold Sport+Target Stratified (Fold-Local Preprocessing)",
         "injury_roc_auc": round(overall_clf['roc_auc'], 4),
         "injury_f1": round(overall_clf['f1_score'], 4),
         "injury_brier": round(overall_clf['brier_score'], 4),
-        "onset_mae": round(overall_onset['mae'], 4),
-        "onset_r2": round(overall_onset['r2_score'], 4),
-        "recovery_mae": round(overall_rec['mae'], 4),
-        "recovery_r2": round(overall_rec['r2_score'], 4),
+        "onset_mae_conditional": round(overall_onset['mae'], 4),
+        "onset_r2_conditional": round(overall_onset['r2_score'], 4),
+        "recovery_mae_conditional": round(overall_rec['mae'], 4),
+        "recovery_r2_conditional": round(overall_rec['r2_score'], 4),
         "training_time_sec": round(time.time() - start_time, 2),
-        "notes": "Production calibrated multi-target ensemble with strict temporal firewall"
+        "notes": "Weighted probability ensemble with fold-local preprocessing and strict temporal firewall"
     }
     os.makedirs("outputs/experiments", exist_ok=True)
     df_exp = pd.DataFrame([exp_record])
@@ -150,31 +173,35 @@ def run_training_pipeline():
     
     # 4. Final Training on Full Training Set (N=3000)
     print("\nRetraining final multi-target production models on full training data (N=3000)...")
+    final_preprocessor = Preprocessor()
+    X_full, final_feature_cols = final_preprocessor.fit_transform(df_train)
+    
     final_system = MultiTargetInjurySystem(random_state=42)
-    final_system.fit(X, y_inj, X[inj_mask], y_onset[inj_mask], y_rec[inj_mask])
+    final_system.fit(X_full, y_inj, X_full[inj_mask], y_onset[inj_mask], y_rec[inj_mask])
     
     # 5. Serialize Artifacts to models/
     os.makedirs("models", exist_ok=True)
     joblib.dump(final_system, "models/multi_target_injury_system.joblib")
-    joblib.dump(preprocessor, "models/preprocessor.joblib")
+    joblib.dump(final_preprocessor, "models/preprocessor.joblib")
     with open("models/feature_columns.json", "w") as f:
-        json.dump(feature_cols, f, indent=4)
+        json.dump(final_feature_cols, f, indent=4)
         
     metadata = {
-        "model_type": "MultiTargetInjurySystem",
-        "feature_count": len(feature_cols),
+        "model_type": "MultiTargetWeightedEnsembleSystem",
+        "feature_count_encoded": len(final_feature_cols),
+        "feature_count_raw": df_train.shape[1] - 5,
         "train_samples_total": len(df_train),
         "train_samples_injured": int(inj_mask.sum()),
         "validation_auc": overall_clf['roc_auc'],
-        "validation_onset_mae": overall_onset['mae'],
-        "validation_recovery_mae": overall_rec['mae'],
+        "validation_onset_mae_conditional": overall_onset['mae'],
+        "validation_recovery_mae_conditional": overall_rec['mae'],
         "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
     }
     with open("models/metadata.json", "w") as f:
         json.dump(metadata, f, indent=4)
         
     print(f"Successfully serialized production artifacts to models/ (Total Time: {time.time() - start_time:.1f}s)")
-    return final_system, preprocessor
+    return final_system, final_preprocessor
 
 if __name__ == "__main__":
     run_training_pipeline()
