@@ -27,50 +27,50 @@ The competition provides historical athlete tracking data across multiple sports
 
 ```mermaid
 graph TD
-    subgraph Multi-Modal Ingestion
-        A[athlete_metadata.csv]
-        B[dailyActivity_merged.csv]
-        C[sleepDay_merged.csv]
-        D[training_sessions.csv]
-        E[hourlyHeartrate / Steps / Cals]
+    subgraph "Multi-Modal Ingestion"
+        A["athlete_metadata.csv"]
+        B["dailyActivity_merged.csv"]
+        C["sleepDay_merged.csv"]
+        D["training_sessions.csv"]
+        E["hourlyHeartrate / Steps / Cals"]
     end
 
-    subgraph Temporal Firewall
-        F[Strict Filter: Date <= 2026-02-03]
+    subgraph "Temporal Firewall"
+        F["Strict Filter: Date &le; 2026-02-03"]
         B --> F
         C --> F
         D --> F
         E --> F
     end
 
-    subgraph Vectorized Feature Engine
-        F --> G1[Workload Dynamics: ACWR 7/30, Monotony, Strain]
-        F --> G2[Sleep Architecture: Efficiency, Deficit, Consistency]
-        F --> G3[Session Metrics: Hours, Gym vs Practice vs Scrimmage]
-        F --> G4[Cardiovascular: Resting Proxy, High-HR Exposure]
-        A --> G5[Anthropometrics: BMI, Experience Ratio, Position OHE]
+    subgraph "Vectorized Feature Engine"
+        F --> G1["Workload Dynamics: ACWR 7/30, Monotony, Strain"]
+        F --> G2["Sleep Architecture: Efficiency, Deficit, Consistency"]
+        F --> G3["Session Metrics: Hours, Gym vs Practice vs Scrimmage"]
+        F --> G4["Cardiovascular: Resting Proxy, High-HR Exposure"]
+        A --> G5["Anthropometrics: BMI, Experience Ratio, Position OHE"]
     end
 
-    subgraph Feature Cache
-        G1 --> H[train_features.parquet / test_features.parquet]
+    subgraph "Feature Cache"
+        G1 --> H["train_features.parquet / test_features.parquet"]
         G2 --> H
         G3 --> H
         G4 --> H
         G5 --> H
     end
 
-    subgraph Multi-Target Modeling Engine
-        H --> V[5-Fold Sport + Target Stratified CV]
-        V --> M1[Target 1: Injury Classifier<br/>CatBoost + LightGBM + RF Ensemble]
-        V --> M2[Target 2: Onset Regressor<br/>RF + CatBoost Bounded 1-30]
-        V --> M3[Target 3: Recovery Regressor<br/>Ridge + CatBoost Bounded 5-20]
+    subgraph "Multi-Target Modeling Engine"
+        H --> V["5-Fold Sport + Target Stratified CV"]
+        V --> M1["Target 1: Injury Classifier<br/>CatBoost + LightGBM + RF Ensemble"]
+        V --> M2["Target 2: Onset Regressor<br/>RF + CatBoost Bounded 1-30"]
+        V --> M3["Target 3: Recovery Regressor<br/>Ridge + CatBoost Bounded 5-20"]
     end
 
-    subgraph Submission Invariants
-        M1 --> P[Hierarchical Conditional Gate]
+    subgraph "Submission Invariants"
+        M1 --> P["Hierarchical Conditional Gate"]
         M2 --> P
         M3 --> P
-        P --> SUB[predictions/submission.csv<br/>1100 Rows | Zero-Filled Non-Injured]
+        P --> SUB["predictions/submission.csv<br/>1100 Rows - Zero-Filled Non-Injured"]
     end
 ```
 
