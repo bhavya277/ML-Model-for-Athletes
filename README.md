@@ -19,6 +19,7 @@ The competition provides historical athlete tracking data across multiple sports
 ### Official PlayHack Evaluation Mechanics:
 - **Task A:** Evaluated using **$F_1$-score** on `injured_in_risk_window`.
 - **Task B:** Evaluated for actually injured athletes using `onset_day_offset` and `recovery_duration`.
+- **Skill Score Formulation:** $\text{Skill} = \max(0, 1 - \frac{\text{MAE}_{\text{model}}}{\text{MAE}_{\text{baseline}}})$, where the baseline predicts the training-set mean timing.
 - **Missed-Injury Penalty:** If an actually injured athlete is missed by the classifier ($\text{Actual}=1, \text{Predicted}=0$), a fixed penalty of $n_{\text{risk}} = 30$ days applies to **both** timing predictions ($30 + 30 = 60$ days total error per false negative).
 - **Submission Requirement:** The official PS requires `onset_day_offset` and `recovery_duration` for **every athlete** (all 1,100 test rows).
 
@@ -95,15 +96,15 @@ Evaluated across **5-Fold Sport + Target Stratified Cross-Validation with Strict
 | **Brier Score** | **0.1453** | **$0.1454 \pm 0.0076$** | Mean squared probability error (well-calibrated raw ensemble) |
 | **Accuracy** | **0.8207** | **$0.8207 \pm 0.0125$** | Overall binary classification accuracy |
 
-### Task B: Timing Evaluation (Conditional Identified vs. Official Penalized)
+### Task B: Timing Evaluation (Unpenalized Actually Injured vs. Official Penalized)
 
-1. **Conditional Timing Performance (Among Identified Injured Athletes $N=527$):**
-   - **Onset MAE:** **$2.6448$ days** (RMSE: $4.0984$d, $R^2 = 0.7820$)
-   - **Recovery MAE:** **$2.9629$ days** (RMSE: $3.4700$d, $R^2 = 0.2037$)
+1. **Unpenalized Timing Performance (Among Actually Injured Athletes $N=1,050$):**
+   - **Onset MAE:** **$2.6448$ days** (Training-Mean Baseline MAE: $7.6148$d $\to$ **Skill Score: $+0.6527$**)
+   - **Recovery MAE:** **$2.9629$ days** (Training-Mean Baseline MAE: $3.2416$d $\to$ **Skill Score: $+0.0860$**)
 
-2. **Official Penalized Timing Performance (All $N=1,050$ Actually Injured Athletes with $n_{\text{risk}}=30$ Penalty on Misses):**
-   - **Penalized Onset MAE:** **$15.31$ days** (Onset Skill Score relative to 30d baseline: **$+0.4897$**)
-   - **Penalized Recovery MAE:** **$16.42$ days** (Recovery Skill Score relative to 30d baseline: **$+0.4527$**)
+2. **Official Penalized Timing Performance (All $N=1,050$ Actually Injured Athletes with $n_{\text{risk}}=30$ Penalty on 523 Misses):**
+   - **Penalized Onset MAE:** **$15.31$ days** (Onset Skill vs. 30d trivial penalty baseline: **$+0.4898$**)
+   - **Penalized Recovery MAE:** **$16.42$ days** (Recovery Skill vs. 30d trivial penalty baseline: **$+0.4526$**)
    - *Note:* Because the official PS does not provide a composite aggregation formula weighting Task A and Task B, threshold $0.50$ is retained because it maximizes the explicit Task A $F_1$-score.
 
 ---
@@ -112,7 +113,7 @@ Evaluated across **5-Fold Sport + Target Stratified Cross-Validation with Strict
 
 1. **Workload Spike Dynamics (`steps_acwr_7_30`):**
    - Defined as: $\text{steps\_mean\_7d} / (\text{steps\_mean\_30d} + 10^{-5})$ (acute 7-day load relative to chronic 30-day baseline).
-   - Acute workload spikes ($>1.30$) provide strong predictive signal for injury risk ($r = +0.548$) and correlate with earlier onset timing ($r = -0.863$).
+   - Acute workload spikes ($>1.30$) provide strong predictive signal for injury risk ($r = +0.548$) and are strongly associated with earlier onset timing ($r = -0.863$).
 2. **Sleep Architecture & Deficit (`sleep_deficit_mean_7d`, `sleep_eff_mean_30d`):**
    - Cumulative acute sleep debt ($\max(0, 480 - \text{sleep minutes})$) exhibits a meaningful association with increased injury vulnerability.
 3. **Cardiovascular Stress Exposure (`hr_pct_elevated_120`, `hr_p10_resting_proxy`):**

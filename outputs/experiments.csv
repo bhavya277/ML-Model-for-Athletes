@@ -1,2 +1,2 @@
-model,feature_version,validation_strategy,injury_roc_auc,injury_f1,injury_brier,onset_mae_conditional,onset_r2_conditional,recovery_mae_conditional,recovery_r2_conditional,training_time_sec,notes
-MultiTargetWeightedEnsemble (CatBoost 45% + LGBM 35% + RF 20%),v1.0_multimodal_92encoded_features,5-Fold Sport+Target Stratified (Fold-Local Preprocessing),0.7624,0.6621,0.1453,2.6448,0.782,2.9629,0.2037,36.57,Weighted probability ensemble with fold-local preprocessing and strict temporal firewall
+model,feature_version,validation_strategy,task_a_f1,task_a_roc_auc,task_a_precision,task_a_recall,onset_unpenalized_mae,onset_penalized_mae,onset_skill_vs_mean,recovery_unpenalized_mae,recovery_penalized_mae,recovery_skill_vs_mean,training_time_sec
+MultiTargetWeightedEnsemble (CatBoost 45% + LGBM 35% + RF 20%),v1.0_multimodal_92encoded_features,5-Fold Sport+Target Stratified (Fold-Local Preprocessing),0.6621,0.7624,0.9723,0.5019,2.6448,15.3067,0.6527,2.9629,16.4219,0.086,35.2

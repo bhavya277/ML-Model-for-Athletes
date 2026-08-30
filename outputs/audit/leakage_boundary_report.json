@@ -10,5 +10,5 @@
     "raw_test_has_risk_window_records": false,
     "firewall_enforcement": "Strict filter Date <= 2026-02-03 across all multi-modal feature extractors",
     "example_submission_schema_verified": true,
-    "non_injured_target_encoding": "zero_filled_numeric"
+    "submission_timing_strategy": "full_row_predictions"
 }

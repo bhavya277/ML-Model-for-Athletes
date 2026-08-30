@@ -1,5 +1,5 @@
 """
-Production Training Pipeline with Strict Fold-Local Preprocessing and Experiment Tracking.
+Production Training Pipeline with Strict Fold-Local Preprocessing and Official PlayHack Evaluation.
 Executes 5-fold cross validation (with zero fold-leakage in imputation/scaling),
 tracks metrics, retrains full multi-target model, and saves artifacts.
 """
@@ -25,6 +25,7 @@ from src.models import (
     MultiTargetInjurySystem
 )
 from src.evaluate import evaluate_classification, evaluate_regression, run_sport_error_breakdown
+from src.evaluate_playhack import evaluate_playhack_metrics
 
 def run_training_pipeline():
     print("==================================================")
@@ -113,6 +114,15 @@ def run_training_pipeline():
     overall_onset = evaluate_regression(y_onset[inj_mask], oof_onset[inj_mask])
     overall_rec = evaluate_regression(y_rec[inj_mask], oof_rec[inj_mask])
     
+    # Official PlayHack Evaluation
+    y_pred_inj = (oof_inj_prob >= 0.50).astype(int)
+    playhack_metrics = evaluate_playhack_metrics(
+        y_inj, y_pred_inj,
+        y_onset, oof_onset,
+        y_rec, oof_rec,
+        n_risk=30.0
+    )
+    
     # Calculate fold mean and std
     auc_list = [f['roc_auc'] for f in fold_metrics]
     f1_list = [f['f1_score'] for f in fold_metrics]
@@ -121,8 +131,8 @@ def run_training_pipeline():
     
     print("\n=== OVERALL OUT-OF-FOLD BENCHMARK (FOLD-LOCAL PREPROCESSING) ===")
     print(f"Injury Target   -> ROC-AUC: {overall_clf['roc_auc']:.4f} (Fold Mean: {np.mean(auc_list):.4f} +/- {np.std(auc_list):.4f}) | PR-AUC: {overall_clf['pr_auc']:.4f} | F1: {overall_clf['f1_score']:.4f} (Fold Mean: {np.mean(f1_list):.4f} +/- {np.std(f1_list):.4f}) | Brier: {overall_clf['brier_score']:.4f} | Acc: {overall_clf['accuracy']:.4f}")
-    print(f"Onset Target    -> MAE: {overall_onset['mae']:.4f} days (Fold Mean: {np.mean(onset_mae_list):.4f} +/- {np.std(onset_mae_list):.4f}) | RMSE: {overall_onset['rmse']:.4f} days | R2: {overall_onset['r2_score']:.4f} [Evaluated conditional on actual injured athletes N=1050]")
-    print(f"Recovery Target -> MAE: {overall_rec['mae']:.4f} days (Fold Mean: {np.mean(rec_mae_list):.4f} +/- {np.std(rec_mae_list):.4f}) | RMSE: {overall_rec['rmse']:.4f} days | R2: {overall_rec['r2_score']:.4f} [Evaluated conditional on actual injured athletes N=1050]")
+    print(f"Onset Target    -> Unpenalized MAE: {overall_onset['mae']:.4f}d (Mean Baseline: {playhack_metrics['task_b_unpenalized_actually_injured']['onset_mean_baseline_mae']:.4f}d, Skill vs Mean: {playhack_metrics['task_b_unpenalized_actually_injured']['onset_skill_vs_mean_baseline']:.4f}) | Penalized MAE (n_risk=30): {playhack_metrics['task_b_official_penalized']['onset_mae_penalized']:.4f}d")
+    print(f"Recovery Target -> Unpenalized MAE: {overall_rec['mae']:.4f}d (Mean Baseline: {playhack_metrics['task_b_unpenalized_actually_injured']['recovery_mean_baseline_mae']:.4f}d, Skill vs Mean: {playhack_metrics['task_b_unpenalized_actually_injured']['recovery_skill_vs_mean_baseline']:.4f}) | Penalized MAE (n_risk=30): {playhack_metrics['task_b_official_penalized']['recovery_mae_penalized']:.4f}d")
     
     # Save validation metrics
     validation_summary = {
@@ -138,8 +148,9 @@ def run_training_pipeline():
             "recovery_mae_std": float(np.std(rec_mae_list)),
         },
         "overall_classification": overall_clf,
-        "overall_onset_conditional": overall_onset,
-        "overall_recovery_conditional": overall_rec,
+        "overall_onset_unpenalized": overall_onset,
+        "overall_recovery_unpenalized": overall_rec,
+        "official_playhack_evaluation": playhack_metrics,
         "runtime_seconds": round(time.time() - start_time, 2)
     }
     os.makedirs("outputs/metrics", exist_ok=True)
@@ -152,15 +163,17 @@ def run_training_pipeline():
         "model": "MultiTargetWeightedEnsemble (CatBoost 45% + LGBM 35% + RF 20%)",
         "feature_version": "v1.0_multimodal_92encoded_features",
         "validation_strategy": "5-Fold Sport+Target Stratified (Fold-Local Preprocessing)",
-        "injury_roc_auc": round(overall_clf['roc_auc'], 4),
-        "injury_f1": round(overall_clf['f1_score'], 4),
-        "injury_brier": round(overall_clf['brier_score'], 4),
-        "onset_mae_conditional": round(overall_onset['mae'], 4),
-        "onset_r2_conditional": round(overall_onset['r2_score'], 4),
-        "recovery_mae_conditional": round(overall_rec['mae'], 4),
-        "recovery_r2_conditional": round(overall_rec['r2_score'], 4),
-        "training_time_sec": round(time.time() - start_time, 2),
-        "notes": "Weighted probability ensemble with fold-local preprocessing and strict temporal firewall"
+        "task_a_f1": round(overall_clf['f1_score'], 4),
+        "task_a_roc_auc": round(overall_clf['roc_auc'], 4),
+        "task_a_precision": round(overall_clf['precision'], 4),
+        "task_a_recall": round(overall_clf['recall'], 4),
+        "onset_unpenalized_mae": round(overall_onset['mae'], 4),
+        "onset_penalized_mae": round(playhack_metrics['task_b_official_penalized']['onset_mae_penalized'], 4),
+        "onset_skill_vs_mean": round(playhack_metrics['task_b_unpenalized_actually_injured']['onset_skill_vs_mean_baseline'], 4),
+        "recovery_unpenalized_mae": round(overall_rec['mae'], 4),
+        "recovery_penalized_mae": round(playhack_metrics['task_b_official_penalized']['recovery_mae_penalized'], 4),
+        "recovery_skill_vs_mean": round(playhack_metrics['task_b_unpenalized_actually_injured']['recovery_skill_vs_mean_baseline'], 4),
+        "training_time_sec": round(time.time() - start_time, 2)
     }
     os.makedirs("outputs/experiments", exist_ok=True)
     df_exp = pd.DataFrame([exp_record])
@@ -193,8 +206,9 @@ def run_training_pipeline():
         "train_samples_total": len(df_train),
         "train_samples_injured": int(inj_mask.sum()),
         "validation_auc": overall_clf['roc_auc'],
-        "validation_onset_mae_conditional": overall_onset['mae'],
-        "validation_recovery_mae_conditional": overall_rec['mae'],
+        "task_a_f1": overall_clf['f1_score'],
+        "task_b_onset_unpenalized_mae": overall_onset['mae'],
+        "task_b_recovery_unpenalized_mae": overall_rec['mae'],
         "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
     }
     with open("models/metadata.json", "w") as f:

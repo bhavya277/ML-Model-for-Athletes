@@ -5,7 +5,8 @@
     "train_samples_total": 3000,
     "train_samples_injured": 1050,
     "validation_auc": 0.7624488400488401,
-    "validation_onset_mae_conditional": 2.644761904761905,
-    "validation_recovery_mae_conditional": 2.962857142857143,
-    "timestamp": "2026-08-30T18:54:56Z"
+    "task_a_f1": 0.6620603015075377,
+    "task_b_onset_unpenalized_mae": 2.644761904761905,
+    "task_b_recovery_unpenalized_mae": 2.962857142857143,
+    "timestamp": "2026-08-30T19:04:50Z"
 }
