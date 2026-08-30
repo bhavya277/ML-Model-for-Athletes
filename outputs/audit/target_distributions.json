@@ -1,0 +1,18 @@
+{
+    "total_athletes": 3000,
+    "injured_count": 1050,
+    "non_injured_count": 1950,
+    "injury_prevalence_pct": 35.0,
+    "onset_day_stats": {
+        "mean": 15.326666666666666,
+        "std": 8.782237540548588,
+        "min": 1.0,
+        "max": 30.0
+    },
+    "recovery_duration_stats": {
+        "mean": 11.545714285714286,
+        "std": 3.8903348392366155,
+        "min": 5.0,
+        "max": 20.0
+    }
+}

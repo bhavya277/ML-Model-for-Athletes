@@ -1,0 +1,39 @@
+# Production Configuration for Athlete Injury Prediction System
+
+global:
+  seed: 42
+  historical_cutoff_date: "2026-02-03"
+  historical_cutoff_timestamp: "2026-02-03T23:59:59"
+
+paths:
+  raw_train_dir: "data_raw"
+  raw_test_dir: "data_raw/Test data"
+  processed_train_features: "data/processed/train_features.parquet"
+  processed_test_features: "data/processed/test_features.parquet"
+  feature_dictionary: "outputs/features/feature_dictionary.csv"
+  models_dir: "models"
+  submission_path: "predictions/submission.csv"
+  metrics_dir: "outputs/metrics"
+  experiments_log: "outputs/experiments.csv"
+
+cv:
+  strategy: "SportTargetStratifiedKFold"
+  n_splits: 5
+  shuffle: true
+
+models:
+  classifier_ensemble:
+    catboost_weight: 0.45
+    lgbm_weight: 0.35
+    rf_weight: 0.20
+    decision_threshold: 0.50
+  onset_regressor:
+    rf_weight: 0.60
+    catboost_weight: 0.40
+    clip_min: 1
+    clip_max: 30
+  recovery_regressor:
+    ridge_weight: 0.50
+    catboost_weight: 0.50
+    clip_min: 5
+    clip_max: 20

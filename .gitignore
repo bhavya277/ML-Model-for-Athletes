@@ -1,0 +1,22 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Raw datasets (>100MB, cannot be committed to GitHub)
+data_raw/
+*.zip
+*.tar.gz
+
+# Temporary logs and caches
+catboost_info/
+scratch/
+.system_generated/
+*.log
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/

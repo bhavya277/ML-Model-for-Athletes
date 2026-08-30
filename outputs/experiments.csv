@@ -1,0 +1,2 @@
+model,feature_version,validation_strategy,injury_roc_auc,injury_f1,injury_brier,onset_mae,onset_r2,recovery_mae,recovery_r2,training_time_sec,notes
+MultiTargetEnsembleSystem (CatBoost+LGBM+RF),v1.0_multimodal_69features,5-Fold Sport+Target Stratified,0.7624,0.6621,0.1453,2.6448,0.782,2.9629,0.2037,35.82,Production calibrated multi-target ensemble with strict temporal firewall

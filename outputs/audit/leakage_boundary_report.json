@@ -1,0 +1,14 @@
+{
+    "historical_cutoff_date": "2026-02-03",
+    "historical_cutoff_timestamp": "2026-02-03T23:59:59",
+    "risk_window_start": "2026-02-04",
+    "risk_window_end": "2026-03-05",
+    "train_athletes_count": 3000,
+    "test_athletes_count": 1100,
+    "train_test_overlap_count": 0,
+    "raw_train_has_risk_window_records": true,
+    "raw_test_has_risk_window_records": false,
+    "firewall_enforcement": "Strict filter Date <= 2026-02-03 across all multi-modal feature extractors",
+    "example_submission_schema_verified": true,
+    "non_injured_target_encoding": "zero_filled_numeric"
+}

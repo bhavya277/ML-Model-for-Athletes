@@ -1,0 +1,21 @@
+table_name,file_path,split,row_count,column_count,columns,size_mb,unique_athletes,null_count
+athlete_metadata_train,data_raw/athlete_metadata.csv,train,3000,11,"athlete_id, sport, age, gender, height_cm, weight_kg_baseline, dominant_side, years_playing, position, team_id, prior_season_injury_count",0.17,3000,0
+athlete_metadata_test,data_raw/Test data/athlete_metadata.csv,test,1100,11,"athlete_id, sport, age, gender, height_cm, weight_kg_baseline, dominant_side, years_playing, position, team_id, prior_season_injury_count",0.06,1100,0
+train_labels,data_raw/train_labels.csv,train,3000,4,"athlete_id, injured_in_risk_window, onset_day_offset, recovery_duration",0.03,3000,3900
+example_submission,example.csv,test,1100,4,"athlete_id, injured_in_risk_window, onset_day_offset, recovery_duration",0.01,1100,0
+dailyActivity_train,data_raw/dailyActivity_merged.csv,train,180000,10,"Id, ActivityDate, TotalSteps, TotalDistance, TrackerDistance, VeryActiveMinutes, FairlyActiveMinutes, LightlyActiveMinutes, SedentaryMinutes, Calories",8.85,3000,0
+dailyActivity_test,data_raw/Test data/dailyActivity_merged.csv,test,33000,10,"Id, ActivityDate, TotalSteps, TotalDistance, TrackerDistance, VeryActiveMinutes, FairlyActiveMinutes, LightlyActiveMinutes, SedentaryMinutes, Calories",1.64,1100,0
+sleepDay_train,data_raw/sleepDay_merged.csv,train,180000,5,"Id, SleepDay, TotalSleepRecords, TotalMinutesAsleep, TotalTimeInBed",4.57,3000,0
+sleepDay_test,data_raw/Test data/sleepDay_merged.csv,test,33000,5,"Id, SleepDay, TotalSleepRecords, TotalMinutesAsleep, TotalTimeInBed",0.85,1100,0
+training_sessions_train,data_raw/training_sessions.csv,train,112108,6,"session_id, athlete_id, date, start_hour, end_hour, sport_session_type",4.2,3000,0
+training_sessions_test,data_raw/Test data/training_sessions.csv,test,20489,6,"session_id, athlete_id, date, start_hour, end_hour, sport_session_type",0.78,1100,0
+weightLogInfo_train,data_raw/weightLogInfo_merged.csv,train,7452,6,"Id, Date, WeightKg, Fat, BMI, IsManualReport",0.24,2506,5174
+weightLogInfo_test,data_raw/Test data/weightLogInfo_merged.csv,test,1103,6,"Id, Date, WeightKg, Fat, BMI, IsManualReport",0.04,747,752
+hourlyCalories_train,data_raw/hourlyCalories_merged.csv,train,4104334,3,"Id, ActivityHour, Calories",116.84,3000,0
+hourlyCalories_test,data_raw/Test data/hourlyCalories_merged.csv,test,752368,3,"Id, ActivityHour, Calories",21.72,1100,0
+hourlyHeartrate_train,data_raw/hourlyHeartrate_merged.csv,train,4104334,5,"Id, ActivityHour, AvgHeartRate, MinHeartRate, MaxHeartRate",138.37,3000,0
+hourlyHeartrate_test,data_raw/Test data/hourlyHeartrate_merged.csv,test,752368,5,"Id, ActivityHour, AvgHeartRate, MinHeartRate, MaxHeartRate",25.6,1100,0
+hourlyIntensities_train,data_raw/hourlyIntensities_merged.csv,train,4104334,4,"Id, ActivityHour, TotalIntensity, AverageIntensity",130.74,3000,0
+hourlyIntensities_test,data_raw/Test data/hourlyIntensities_merged.csv,test,752368,4,"Id, ActivityHour, TotalIntensity, AverageIntensity",24.26,1100,0
+hourlySteps_train,data_raw/hourlySteps_merged.csv,train,4104334,3,"Id, ActivityHour, StepTotal",118.31,3000,0
+hourlySteps_test,data_raw/Test data/hourlySteps_merged.csv,test,752368,3,"Id, ActivityHour, StepTotal",22.01,1100,0

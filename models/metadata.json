@@ -1,0 +1,10 @@
+{
+    "model_type": "MultiTargetInjurySystem",
+    "feature_count": 92,
+    "train_samples_total": 3000,
+    "train_samples_injured": 1050,
+    "validation_auc": 0.7624488400488401,
+    "validation_onset_mae": 2.644761904761905,
+    "validation_recovery_mae": 2.962857142857143,
+    "timestamp": "2026-08-30T18:08:07Z"
+}
