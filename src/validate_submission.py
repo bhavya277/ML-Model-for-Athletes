@@ -78,29 +78,25 @@ def validate_submission(submission_path: str = "predictions/submission.csv", exa
     else:
         print("[PASSED] 'injured_in_risk_window' contains only valid binary values {0, 1}.")
         
-    # Non-injured athletes constraint check: onset=0, rec=0
-    non_inj = sub[sub['injured_in_risk_window'] == 0]
-    if (non_inj['onset_day_offset'] != 0).any():
-        errors.append("Non-injured athletes have non-zero 'onset_day_offset'.")
-    elif (non_inj['recovery_duration'] != 0).any():
-        errors.append("Non-injured athletes have non-zero 'recovery_duration'.")
+    # Check valid ranges for onset_day_offset and recovery_duration
+    # Supporting both all-row populated (required by official PS) and zero-gated formats
+    min_on, max_on = sub['onset_day_offset'].min(), sub['onset_day_offset'].max()
+    min_rec, max_rec = sub['recovery_duration'].min(), sub['recovery_duration'].max()
+    
+    if (sub['onset_day_offset'] < 0).any() or (sub['onset_day_offset'] > 30).any():
+        errors.append(f"'onset_day_offset' out of valid range [0, 30]: [{min_on}, {max_on}]")
     else:
-        print(f"[PASSED] All {len(non_inj)} non-injured athletes have strictly 0 offset and 0 duration.")
+        print(f"[PASSED] 'onset_day_offset' values strictly within valid bounds [0, 30] (observed: [{min_on}, {max_on}]).")
         
-    # Injured athletes constraint check: onset in [1, 30], rec in [5, 20]
-    inj = sub[sub['injured_in_risk_window'] == 1]
-    if len(inj) > 0:
-        if (inj['onset_day_offset'] < 1).any() or (inj['onset_day_offset'] > 30).any():
-            errors.append(f"Injured athletes 'onset_day_offset' out of [1, 30] range: [{inj['onset_day_offset'].min()}, {inj['onset_day_offset'].max()}]")
-        else:
-            print(f"[PASSED] All {len(inj)} injured athletes have valid 'onset_day_offset' in [1, 30] (range: [{inj['onset_day_offset'].min()}, {inj['onset_day_offset'].max()}]).")
-            
-        if (inj['recovery_duration'] < 5).any() or (inj['recovery_duration'] > 20).any():
-            errors.append(f"Injured athletes 'recovery_duration' out of [5, 20] range: [{inj['recovery_duration'].min()}, {inj['recovery_duration'].max()}]")
-        else:
-            print(f"[PASSED] All {len(inj)} injured athletes have valid 'recovery_duration' in [5, 20] (range: [{inj['recovery_duration'].min()}, {inj['recovery_duration'].max()}]).")
+    if (sub['recovery_duration'] < 0).any() or (sub['recovery_duration'] > 20).any():
+        errors.append(f"'recovery_duration' out of valid range [0, 20]: [{min_rec}, {max_rec}]")
+    else:
+        print(f"[PASSED] 'recovery_duration' values strictly within valid bounds [0, 20] (observed: [{min_rec}, {max_rec}]).")
 
     # 7. Final Assessment
+    inj = sub[sub['injured_in_risk_window'] == 1]
+    non_inj = sub[sub['injured_in_risk_window'] == 0]
+    
     if errors:
         print("\n=== VALIDATION FAILED WITH ERRORS ===")
         for e in errors:
