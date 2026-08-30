@@ -112,12 +112,12 @@ Evaluated across **5-Fold Sport + Target Stratified Cross-Validation with Strict
 ## 4. Key Sports Science & Feature Engineering Insights
 
 1. **Workload Spike Dynamics (`steps_acwr_7_30`):**
-   - Defined as: $\text{steps\_mean\_7d} / (\text{steps\_mean\_30d} + 10^{-5})$ (acute 7-day load relative to chronic 30-day baseline).
-   - Acute workload spikes ($>1.30$) provide strong predictive signal for injury risk ($r = +0.548$) and are strongly associated with earlier onset timing ($r = -0.863$).
+   - Defined as: `steps_mean_7d / (steps_mean_30d + 1e-5)` (acute 7-day load relative to chronic 30-day baseline).
+   - Acute workload spikes (> 1.30) provide strong predictive signal for injury risk ($r = +0.548$) and are strongly associated with earlier onset timing ($r = -0.863$).
 2. **Sleep Architecture & Deficit (`sleep_deficit_mean_7d`, `sleep_eff_mean_30d`):**
-   - Cumulative acute sleep debt ($\max(0, 480 - \text{sleep minutes})$) exhibits a meaningful association with increased injury vulnerability.
+   - Cumulative acute sleep debt (`max(0, 480 - sleep_minutes)`) exhibits a meaningful association with increased injury vulnerability.
 3. **Cardiovascular Stress Exposure (`hr_pct_elevated_120`, `hr_p10_resting_proxy`):**
-   - Elevated heart rates ($\ge 120 \text{ bpm}$) outside scheduled sessions are informative markers of fatigue.
+   - Elevated heart rates (>= 120 bpm) outside scheduled sessions are informative markers of fatigue.
 
 ---
 
