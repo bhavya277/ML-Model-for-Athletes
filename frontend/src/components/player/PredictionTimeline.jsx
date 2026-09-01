@@ -30,12 +30,12 @@ export const PredictionTimeline = ({ athlete }) => {
         }
       />
 
-      <CardBody className="space-y-6">
+      <CardBody className="space-y-4 sm:space-y-6">
         {/* Visual Timeline Bar */}
-        <div className="relative pt-6 pb-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 relative">
+        <div className="relative pt-2 sm:pt-4 pb-2">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 relative">
             {/* Phase 1: Historical Telemetry */}
-            <div className="p-4 rounded-xl bg-surface-100/70 border border-border-subtle relative overflow-hidden">
+            <div className="p-3.5 sm:p-4 rounded-xl bg-surface-100/70 border border-border-subtle relative overflow-hidden">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center space-x-2">
                   <div className="w-2.5 h-2.5 rounded-full bg-brand-400" />
@@ -43,7 +43,7 @@ export const PredictionTimeline = ({ athlete }) => {
                     Phase 1: Historical Observation
                   </span>
                 </div>
-                <span className="text-[11px] font-mono text-slate-400">30 Days Telemetry</span>
+                <span className="text-[10px] sm:text-[11px] font-mono text-slate-400">30 Days Telemetry</span>
               </div>
               <p className="text-xs text-slate-400 leading-relaxed">
                 Ingests 74 multimodal features across wearable steps, sleep architecture, cardiovascular load, and session logs.
@@ -55,7 +55,7 @@ export const PredictionTimeline = ({ athlete }) => {
             </div>
 
             {/* Phase 2: Risk Forecast Window */}
-            <div className={`p-4 rounded-xl border relative overflow-hidden ${
+            <div className={`p-3.5 sm:p-4 rounded-xl border relative overflow-hidden ${
               isHighRisk ? 'bg-orange-500/5 border-orange-500/30' : 'bg-surface-100/70 border-border-subtle'
             }`}>
               <div className="flex items-center justify-between mb-2">
@@ -65,7 +65,7 @@ export const PredictionTimeline = ({ athlete }) => {
                     Phase 2: 30-Day Risk Window
                   </span>
                 </div>
-                <span className="text-[11px] font-mono text-slate-400">Target Forecast</span>
+                <span className="text-[10px] sm:text-[11px] font-mono text-slate-400">Target Forecast</span>
               </div>
               <p className="text-xs text-slate-400 leading-relaxed">
                 Evaluates future injury vulnerability, onset timing offset ($1 \le \text{onset} \le 30$), and expected recovery duration.
@@ -78,20 +78,20 @@ export const PredictionTimeline = ({ athlete }) => {
           </div>
 
           {/* Onset & Recovery Timeline Visualization */}
-          <div className="mt-6 p-4 rounded-xl bg-surface-300/80 border border-border-subtle space-y-3">
+          <div className="mt-4 sm:mt-6 p-3.5 sm:p-4 rounded-xl bg-surface-300/80 border border-border-subtle space-y-3">
             <div className="flex items-center justify-between text-xs">
               <span className="font-semibold text-slate-300">Forecasted Window Sequence:</span>
-              <span className="font-mono text-slate-400">Risk Window Days 1 &rarr; 30</span>
+              <span className="font-mono text-slate-400 text-[11px]">Days 1 &rarr; 30</span>
             </div>
 
             {/* Timeline track */}
-            <div className="h-7 w-full bg-surface-100 rounded-lg relative overflow-hidden flex items-center px-2 border border-border-subtle/60">
+            <div className="h-8 sm:h-7 w-full bg-surface-100 rounded-lg relative overflow-hidden flex items-center px-2 border border-border-subtle/60">
               {/* Day markers */}
-              <div className="absolute inset-0 flex justify-between px-3 items-center pointer-events-none text-[9px] font-mono text-slate-600">
-                <span>Day 1 (Feb 04)</span>
-                <span>Day 10</span>
-                <span>Day 20</span>
-                <span>Day 30 (Mar 05)</span>
+              <div className="absolute inset-0 flex justify-between px-2 sm:px-3 items-center pointer-events-none text-[8px] sm:text-[9px] font-mono text-slate-500">
+                <span>D1</span>
+                <span>D10</span>
+                <span>D20</span>
+                <span>D30</span>
               </div>
 
               {/* Onset Day Marker */}
@@ -112,14 +112,14 @@ export const PredictionTimeline = ({ athlete }) => {
               />
             </div>
 
-            <div className="flex flex-wrap items-center justify-between gap-2 text-xs pt-1">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 text-xs pt-1">
               <div className="flex items-center space-x-2">
-                <span className="w-2.5 h-2.5 rounded bg-rose-500" />
+                <span className="w-2.5 h-2.5 rounded bg-rose-500 flex-shrink-0" />
                 <span className="text-slate-300">Predicted Onset: <strong className="text-rose-400 font-mono">Day {onset}</strong> ({athlete.predictions.predictedOnsetDate})</span>
               </div>
               <div className="flex items-center space-x-2">
-                <span className="w-4 h-2 rounded bg-rose-500/40 border border-rose-500/50" />
-                <span className="text-slate-300">Projected Recovery Span: <strong className="text-slate-200 font-mono">{recovery} days</strong></span>
+                <span className="w-4 h-2 rounded bg-rose-500/40 border border-rose-500/50 flex-shrink-0" />
+                <span className="text-slate-300">Projected Recovery: <strong className="text-slate-200 font-mono">{recovery} days</strong></span>
               </div>
             </div>
           </div>
